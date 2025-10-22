@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Container, Stack, Button, Title, Text, Card } from '@ui8kit/core'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@ui8kit/form'
-import { supabase } from '../lib/supabaseClient'
+import { supabase, checkTablesSchema } from '../lib/supabaseClient'
 
 type TableSchema = {
   id?: string
@@ -82,6 +82,12 @@ export default function TableApp({ tableId }: TableAppProps): React.ReactElement
       return
     }
 
+    const schemaState = await checkTablesSchema()
+    if (schemaState === 'missing') {
+      window.alert('Supabase schema is missing. Open Table Manager to copy SQL and initialize.')
+      return
+    }
+
     if (direction === 'pull') {
       try {
         const { data, error } = await supabase.from('tables').select('*').eq('name', table.name).single()
@@ -102,10 +108,12 @@ export default function TableApp({ tableId }: TableAppProps): React.ReactElement
       }
     } else {
       try {
-        const { error } = await supabase.from('tables').update({
+        // Upsert by name to allow first-time creation via editor as well
+        const { error } = await supabase.from('tables').upsert({
+          name: table.name,
           payload: table,
           updated_at: new Date().toISOString()
-        }).eq('name', table.name)
+        }, { onConflict: 'name' })
 
         if (error) {
           window.alert('Push error: ' + error.message)

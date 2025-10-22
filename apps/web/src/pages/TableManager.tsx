@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Container, Stack, Button, Title, Text, Card, Group } from '@ui8kit/core'
-import { supabase } from '../lib/supabaseClient'
+import { supabase, checkTablesSchema } from '../lib/supabaseClient'
 
 type TableSchema = {
   id?: string
@@ -15,6 +15,7 @@ export default function TableManager(): React.ReactElement {
   const [loading, setLoading] = useState(true)
   const [newTableName, setNewTableName] = useState('')
   const [columnCount, setColumnCount] = useState(3)
+  const [schemaMissing, setSchemaMissing] = useState(false)
 
   useEffect(() => {
     loadTables()
@@ -23,6 +24,11 @@ export default function TableManager(): React.ReactElement {
   async function loadTables() {
     setLoading(true)
     try {
+      const schemaState = await checkTablesSchema()
+      if (schemaState === 'missing') {
+        setSchemaMissing(true)
+        return
+      }
       const { data, error } = await supabase.from('tables').select('*').order('updated_at', { ascending: false })
       if (error) {
         window.alert('Load error: ' + error.message)
@@ -42,6 +48,11 @@ export default function TableManager(): React.ReactElement {
   async function createNewTable() {
     if (!newTableName.trim()) {
       window.alert('Table name is required')
+      return
+    }
+
+    if (schemaMissing) {
+      window.alert('Supabase schema is missing. Please run the SQL from supabase.sql in your project or click "Copy SQL" below.')
       return
     }
 
@@ -99,6 +110,69 @@ export default function TableManager(): React.ReactElement {
   return (
     <Container>
       <Stack gap="lg">
+        {schemaMissing && (
+          <Card>
+            <Stack gap="sm">
+              <Title size="lg">Supabase schema is not initialized</Title>
+              <Text>
+                Please open Supabase SQL Editor and run the SQL from <code>apps/web/supabase.sql</code>. This will create the
+                <code> public.tables </code> relation and policies.
+              </Text>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Button onClick={() => {
+                  navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS public.tables (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL UNIQUE,
+  payload JSONB NOT NULL DEFAULT '{"name":"","columns":[],"rows":[]}',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT name_not_empty CHECK (name != '')
+);
+CREATE INDEX IF NOT EXISTS idx_tables_name ON public.tables(name);
+ALTER TABLE public.tables ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all users to read tables" ON public.tables FOR SELECT USING (true);
+CREATE POLICY "Allow users to insert tables" ON public.tables FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow users to update tables" ON public.tables FOR UPDATE USING (true);
+CREATE POLICY "Allow users to delete tables" ON public.tables FOR DELETE USING (true);
+CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS update_tables_updated_at ON public.tables;
+CREATE TRIGGER update_tables_updated_at BEFORE UPDATE ON public.tables FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();`)
+                  window.alert('SQL copied to clipboard')
+                }}>Copy SQL</Button>
+                <Button onClick={() => {
+                  const sql = `-- See apps/web/supabase.sql in the repo\n` +
+                    `CREATE TABLE IF NOT EXISTS public.tables (\n` +
+                    `  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n` +
+                    `  name TEXT NOT NULL UNIQUE,\n` +
+                    `  payload JSONB NOT NULL DEFAULT '{"name":"","columns":[],"rows":[]}',\n` +
+                    `  created_at TIMESTAMPTZ DEFAULT now(),\n` +
+                    `  updated_at TIMESTAMPTZ DEFAULT now(),\n` +
+                    `  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,\n` +
+                    `  CONSTRAINT name_not_empty CHECK (name != '')\n` +
+                    `);\n` +
+                    `CREATE INDEX IF NOT EXISTS idx_tables_name ON public.tables(name);\n` +
+                    `ALTER TABLE public.tables ENABLE ROW LEVEL SECURITY;\n` +
+                    `CREATE POLICY "Allow all users to read tables" ON public.tables FOR SELECT USING (true);\n` +
+                    `CREATE POLICY "Allow users to insert tables" ON public.tables FOR INSERT WITH CHECK (true);\n` +
+                    `CREATE POLICY "Allow users to update tables" ON public.tables FOR UPDATE USING (true);\n` +
+                    `CREATE POLICY "Allow users to delete tables" ON public.tables FOR DELETE USING (true);\n` +
+                    `CREATE OR REPLACE FUNCTION update_updated_at_column() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = now(); RETURN NEW; END; $$ LANGUAGE plpgsql;\n` +
+                    `DROP TRIGGER IF EXISTS update_tables_updated_at ON public.tables;\n` +
+                    `CREATE TRIGGER update_tables_updated_at BEFORE UPDATE ON public.tables FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();\n`
+                  const blob = new Blob([sql], { type: 'text/sql' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = 'init_tables.sql'
+                  a.click()
+                  URL.revokeObjectURL(url)
+                }}>Download SQL</Button>
+              </div>
+            </Stack>
+          </Card>
+        )}
         <Card>
           <Stack gap="md">
             <Title size="lg">Create New Table</Title>
