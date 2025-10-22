@@ -171,16 +171,16 @@ export default function TableApp({ tableId }: TableAppProps): React.ReactElement
               <Button onClick={() => syncWithSupabase('push')}>📤 Sync Push</Button>
               <Button onClick={handleExport}>📥 Export JSON</Button>
               <Label style={{ display: 'inline-block' }}>
-                <input type="file" accept="application/json" onChange={handleImportFile} style={{ display: 'none' }} />
+                <Input type="file" accept="application/json" onChange={handleImportFile} style={{ display: 'none' }} />
                 <Button>📤 Import JSON</Button>
               </Label>
             </Box>
           </Stack>
         </Card>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
+        <Table className='border border-secondary'>
+          <TableHeader className='bg-secondary/25'>
+            <TableRow className='border-none'>
               {headerRow.map((h) => (
                 <TableHead key={h}>{h}</TableHead>
               ))}
@@ -188,15 +188,14 @@ export default function TableApp({ tableId }: TableAppProps): React.ReactElement
           </TableHeader>
           <TableBody>
             {table.rows.map((r, ri) => (
-              <TableRow key={ri}>
+              <TableRow key={ri} className='border-none'>
                 {headerRow.map((col) => (
-                  <TableCell key={col}>
+                  <TableCell key={col} className='p-0'>
                     <Input
                       value={r[col] ?? ''}
                       onChange={(e) => handleCellChange(ri, col, e.target.value)}
-                    >
-                      {r[col] ?? ''}      
-                    </Input>
+                      className='w-full border-none rounded-none ring-0 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-accent/25'
+                    />
                   </TableCell>
                 ))}
               </TableRow>
