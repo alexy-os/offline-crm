@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Container, Stack, Button, Title, Text, Card } from '@ui8kit/core'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@ui8kit/form'
+import { Container, Box, Stack, Button, Title, Text, Card } from '@ui8kit/core'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Label, Input } from '@ui8kit/form'
 import { supabase, checkTablesSchema } from '../lib/supabaseClient'
 
 type TableSchema = {
@@ -166,15 +166,15 @@ export default function TableApp({ tableId }: TableAppProps): React.ReactElement
           <Stack gap="sm">
             <Title size="lg">{table.name}</Title>
             <Text>Columns: {table.columns.join(', ')}</Text>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Box display="flex" gap={8} wrap="wrap">
               <Button onClick={() => syncWithSupabase('pull')}>📥 Sync Pull</Button>
               <Button onClick={() => syncWithSupabase('push')}>📤 Sync Push</Button>
               <Button onClick={handleExport}>📥 Export JSON</Button>
-              <label style={{ display: 'inline-block' }}>
+              <Label style={{ display: 'inline-block' }}>
                 <input type="file" accept="application/json" onChange={handleImportFile} style={{ display: 'none' }} />
                 <Button>📤 Import JSON</Button>
-              </label>
-            </div>
+              </Label>
+            </Box>
           </Stack>
         </Card>
 
@@ -191,17 +191,12 @@ export default function TableApp({ tableId }: TableAppProps): React.ReactElement
               <TableRow key={ri}>
                 {headerRow.map((col) => (
                   <TableCell key={col}>
-                    <input
+                    <Input
                       value={r[col] ?? ''}
                       onChange={(e) => handleCellChange(ri, col, e.target.value)}
-                      style={{
-                        width: '100%',
-                        border: 'none',
-                        background: 'transparent',
-                        padding: '4px',
-                        fontFamily: 'inherit'
-                      }}
-                    />
+                    >
+                      {r[col] ?? ''}      
+                    </Input>
                   </TableCell>
                 ))}
               </TableRow>
