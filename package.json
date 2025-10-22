@@ -1,0 +1,29 @@
+{
+  "name": "@ui8kit/workspace",
+  "version": "0.0.1",
+  "private": true,
+  "license": "GPL-3.0",
+  "type": "module",
+  "author": {
+    "name": "buildy",
+    "url": "https://ui.buildy.tw"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/@ui8kit/*"
+  ],
+  "scripts": {
+    "dev": "bunx turbo run dev",
+    "build": "bunx turbo run build",
+    "test": "bunx turbo run test",
+    "lint": "bunx turbo run lint",
+    "dev:web": "bunx turbo run dev --filter=./apps/web",
+    "build:web": "bunx turbo run build --filter=./apps/web",
+    "preview:web": "bunx turbo run preview --filter=./apps/web"
+  },
+  "packageManager": "bun@1.1.30",
+  "devDependencies": {
+    "turbo": "^2.5.6"
+  }
+}

@@ -1,0 +1,15 @@
+node_modules
+dist
+build
+.turbo/
+.manual/
+bun.lock
+package-lock.json
+.env
+
+## build
+vite.config.d.ts
+tsconfig.tsbuildinfo
+tsconfig.node.tsbuildinfo
+bash.exe.stackdump
+vite.config.js
