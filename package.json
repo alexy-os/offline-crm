@@ -20,7 +20,10 @@
     "lint": "bunx turbo run lint",
     "dev:web": "bunx turbo run dev --filter=./apps/web",
     "build:web": "bunx turbo run build --filter=./apps/web",
-    "preview:web": "bunx turbo run preview --filter=./apps/web"
+    "preview:web": "bunx turbo run preview --filter=./apps/web",
+    "dev:maker": "bunx turbo run dev --filter=./apps/maker",
+    "build:maker": "bunx turbo run build --filter=./apps/maker",
+    "preview:maker": "bunx turbo run preview --filter=./apps/maker"
   },
   "packageManager": "bun@1.1.30",
   "devDependencies": {
