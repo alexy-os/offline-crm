@@ -52,19 +52,29 @@ alter table public.table_columns enable row level security;
 alter table public.table_rows enable row level security;
 alter table public.table_cells enable row level security;
 
-create policy if not exists "tables_select_all" on public.tables for select using (true);
-create policy if not exists "tables_ins_all"   on public.tables for insert with check (true);
-create policy if not exists "tables_upd_all"   on public.tables for update using (true);
-create policy if not exists "tables_del_all"   on public.tables for delete using (true);
+drop policy if exists "tables_select_all" on public.tables;
+create policy "tables_select_all" on public.tables for select using (true);
+drop policy if exists "tables_ins_all" on public.tables;
+create policy "tables_ins_all"   on public.tables for insert with check (true);
+drop policy if exists "tables_upd_all" on public.tables;
+create policy "tables_upd_all"   on public.tables for update using (true);
+drop policy if exists "tables_del_all" on public.tables;
+create policy "tables_del_all"   on public.tables for delete using (true);
 
-create policy if not exists "cols_sel" on public.table_columns for select using (true);
-create policy if not exists "cols_mut" on public.table_columns for all using (true) with check (true);
+drop policy if exists "cols_sel" on public.table_columns;
+create policy "cols_sel" on public.table_columns for select using (true);
+drop policy if exists "cols_mut" on public.table_columns;
+create policy "cols_mut" on public.table_columns for all using (true) with check (true);
 
-create policy if not exists "rows_sel" on public.table_rows for select using (true);
-create policy if not exists "rows_mut" on public.table_rows for all using (true) with check (true);
+drop policy if exists "rows_sel" on public.table_rows;
+create policy "rows_sel" on public.table_rows for select using (true);
+drop policy if exists "rows_mut" on public.table_rows;
+create policy "rows_mut" on public.table_rows for all using (true) with check (true);
 
-create policy if not exists "cells_sel" on public.table_cells for select using (true);
-create policy if not exists "cells_mut" on public.table_cells for all using (true) with check (true);
+drop policy if exists "cells_sel" on public.table_cells;
+create policy "cells_sel" on public.table_cells for select using (true);
+drop policy if exists "cells_mut" on public.table_cells;
+create policy "cells_mut" on public.table_cells for all using (true) with check (true);
 
 create or replace function update_ts() returns trigger as $$
 begin new.updated_at = now(); return new; end; $$ language plpgsql;
