@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Container, Stack, Button, Title, Text, Card, Group } from '@ui8kit/core'
 import { supabase, checkTablesSchema } from '../lib/supabaseClient'
+import { SupabaseTablesRepository, SupabaseColumnsRepository, SupabaseRowsRepository } from '@/infrastructure/supabase/SupabaseRepositories'
+import { CreateTableUseCase, AddColumnUseCase, AddRowUseCase } from '@/application/usecases'
 
 type TableSchema = {
   id?: string
@@ -16,6 +18,12 @@ export default function TableManager(): React.ReactElement {
   const [newTableName, setNewTableName] = useState('')
   const [columnCount, setColumnCount] = useState(3)
   const [schemaMissing, setSchemaMissing] = useState(false)
+  const tablesRepo = new SupabaseTablesRepository()
+  const columnsRepo = new SupabaseColumnsRepository()
+  const rowsRepo = new SupabaseRowsRepository()
+  const createTable = new CreateTableUseCase(tablesRepo)
+  const addColumn = new AddColumnUseCase(columnsRepo)
+  const addRow = new AddRowUseCase(rowsRepo)
 
   useEffect(() => {
     loadTables()
@@ -56,30 +64,19 @@ export default function TableManager(): React.ReactElement {
       return
     }
 
-    const defaultColumns = Array.from({ length: columnCount }, (_, i) => String.fromCharCode(65 + i))
-    const newTable: TableSchema = {
-      name: newTableName,
-      columns: defaultColumns,
-      rows: [Object.fromEntries(defaultColumns.map(c => [c, '']))]
-    }
-
     try {
-      const { data, error } = await supabase.from('tables').insert({
-        name: newTableName,
-        payload: newTable
-      }).select().single()
-
-      if (error) {
-        window.alert('Create error: ' + error.message)
-        return
+      const t = await createTable.execute(newTableName)
+      const defaultColumns = Array.from({ length: columnCount }, (_, i) => String.fromCharCode(65 + i))
+      for (const [i, key] of defaultColumns.entries()) {
+        await addColumn.execute({ tableId: t.id, key, name: key, position: i, type: 'text' })
       }
+      await addRow.execute({ tableId: t.id, position: 0 })
 
-      if (data) {
-        setTables([data as any, ...tables])
-        setNewTableName('')
-        setColumnCount(3)
-        window.alert('Table created successfully!')
-      }
+      const refreshed = await tablesRepo.listTables()
+      setTables(refreshed as any)
+      setNewTableName('')
+      setColumnCount(3)
+      window.alert('Table created successfully!')
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('Failed to create table:', e)

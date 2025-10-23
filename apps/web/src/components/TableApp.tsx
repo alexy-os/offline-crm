@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Container, Box, Stack, Button, Title, Text, Card } from '@ui8kit/core'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Label, Input } from '@ui8kit/form'
+import { Label, Input } from '@ui8kit/form'
 import { supabase, checkTablesSchema } from '../lib/supabaseClient'
+import { SupabaseCellsRepository, SupabaseColumnsRepository, SupabaseGridQueryService, SupabaseRowsRepository, SupabaseTablesRepository } from '@/infrastructure/supabase/SupabaseRepositories'
+import { LoadGridUseCase, UpdateCellUseCase } from '@/application/usecases'
+import { TableGrid } from '@/ui/TableGrid'
 
 type TableSchema = {
   id?: string
@@ -67,6 +70,31 @@ export default function TableApp({ tableId }: TableAppProps): React.ReactElement
   }
 
   const headerRow = useMemo(() => table.columns, [table.columns])
+
+  // Clean architecture services for normalized schema
+  const tablesRepo = useMemo(() => new SupabaseTablesRepository(), [])
+  const columnsRepo = useMemo(() => new SupabaseColumnsRepository(), [])
+  const rowsRepo = useMemo(() => new SupabaseRowsRepository(), [])
+  const cellsRepo = useMemo(() => new SupabaseCellsRepository(), [])
+  const gridService = useMemo(() => new SupabaseGridQueryService(tablesRepo, columnsRepo, rowsRepo, cellsRepo), [tablesRepo, columnsRepo, rowsRepo, cellsRepo])
+  const loadGrid = useMemo(() => new LoadGridUseCase(gridService), [gridService])
+  const updateCell = useMemo(() => new UpdateCellUseCase(cellsRepo), [cellsRepo])
+
+  const [grid, setGrid] = useState<any | null>(null)
+
+  useEffect(() => {
+    async function fetchGrid() {
+      if (!tableId) return
+      try {
+        const g = await loadGrid.execute(tableId, { limit: 500, offset: 0 })
+        setGrid(g)
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Grid load failed', e)
+      }
+    }
+    fetchGrid()
+  }, [tableId, loadGrid])
 
   function handleCellChange(rowIndex: number, colId: string, value: any): void {
     setTable((prev) => {
@@ -178,30 +206,20 @@ export default function TableApp({ tableId }: TableAppProps): React.ReactElement
           </Stack>
         </Card>
 
-        <Table className='border border-secondary'>
-          <TableHeader className='bg-secondary/25'>
-            <TableRow className='border-none'>
-              {headerRow.map((h) => (
-                <TableHead key={h}>{h}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {table.rows.map((r, ri) => (
-              <TableRow key={ri} className='border-none'>
-                {headerRow.map((col) => (
-                  <TableCell key={col} className='p-0'>
-                    <Input
-                      value={r[col] ?? ''}
-                      onChange={(e) => handleCellChange(ri, col, e.target.value)}
-                      className='w-full border-none rounded-none ring-0 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-accent/25'
-                    />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {grid && (
+          <TableGrid
+            data={grid}
+            onCellChange={async ({ rowId, columnKey, value }) => {
+              const colId = grid.columnKeyToId[columnKey]
+              if (!colId) return
+              await updateCell.execute({ rowId, columnId: colId, value })
+              setGrid({
+                ...grid,
+                rows: grid.rows.map((r: any) => (r.rowId === rowId ? { ...r, values: { ...r.values, [columnKey]: value } } : r))
+              })
+            }}
+          />
+        )}
       </Stack>
     </Container>
   )
