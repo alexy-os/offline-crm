@@ -89,6 +89,23 @@ function buildColumns(
   return cols
 }
 
+function defaultValueForKind(kind: ColumnKind) {
+  switch (kind) {
+    case 'number':
+      return 0
+    case 'boolean':
+      return false
+    case 'date':
+      return ''
+    case 'tags':
+      return []
+    case 'object':
+      return {}
+    default:
+      return ''
+  }
+}
+
 function generateTypes(config: BuilderConfig): string {
   const fields = config.columns.map((c) => `  ${c.key}: ${c.kind === 'number' ? 'number' : c.kind === 'boolean' ? 'boolean' : 'string'};`).join('\n')
   return `export interface ${pascal(config.tableName)}Row {\n${fields}\n}`
@@ -289,8 +306,9 @@ export default function GetTable() {
                       onClick={() => {
                         const id = String(Date.now())
                         const newRow: Row = { id }
-                        for (const c of config.columns) newRow[c.key] = ''
+                        for (const c of config.columns) newRow[c.key] = defaultValueForKind(c.kind)
                         setRows((rs) => [...rs, newRow])
+                        setEditor({ mode: 'row', row: newRow, signal: Date.now() })
                       }}
                     >
                       Add Row
