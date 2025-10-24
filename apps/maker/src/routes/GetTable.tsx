@@ -1,7 +1,7 @@
 import { Block, Box, Button, Container, Group, Stack, Text, Title } from '@ui8kit/core'
 import { Input, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch, Checkbox } from '@ui8kit/form'
 import { useEffect, useMemo, useState } from 'react'
-import { TogglesBar, TableEditorSheet, ExportPanel } from '@buildy/table-maker'
+import { TogglesBar, TableEditorSheet, ExportPanel, SchemaPreview } from '@buildy/table-maker'
 import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, type SortingState, type ColumnFiltersState } from '@tanstack/react-table'
 import type { BuilderConfig as CoreConfig, ColumnKind as CoreKind } from '@buildy/builder-core'
 import { generateTypes as coreGenerateTypes, generateUI as coreGenerateUI, generateSQLNormalized } from '@buildy/builder-core'
@@ -369,6 +369,7 @@ export default function GetTable() {
             </Stack>
           </Box>
           <ExportPanel config={config} rows={rows} />
+          <SchemaPreview config={config} rows={rows} />
 
           <div className="flex gap-2">
             <label htmlFor="editor-sheet">
