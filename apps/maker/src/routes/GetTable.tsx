@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { TogglesBar, TableEditorSheet, ExportPanel, SchemaPreview } from '@buildy/table-maker'
 import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, type SortingState, type ColumnFiltersState } from '@tanstack/react-table'
 import type { BuilderConfig as CoreConfig, ColumnKind as CoreKind } from '@buildy/builder-core'
-import { generateTypes as coreGenerateTypes, generateUI as coreGenerateUI, generateSQLNormalized } from '@buildy/builder-core'
+import { generateTypes as coreGenerateTypes, generateUI as coreGenerateUI, generateSQLNormalized, defaultValueForKind, makeGlobalFilter } from '@buildy/builder-core'
 
 type ColumnKind = CoreKind
 
@@ -89,22 +89,6 @@ function buildColumns(
   return cols
 }
 
-function defaultValueForKind(kind: ColumnKind) {
-  switch (kind) {
-    case 'number':
-      return 0
-    case 'boolean':
-      return false
-    case 'date':
-      return ''
-    case 'tags':
-      return []
-    case 'object':
-      return {}
-    default:
-      return ''
-  }
-}
 
 function generateTypes(config: BuilderConfig): string {
   const fields = config.columns.map((c) => `  ${c.key}: ${c.kind === 'number' ? 'number' : c.kind === 'boolean' ? 'boolean' : 'string'};`).join('\n')
@@ -249,15 +233,7 @@ export default function GetTable() {
     getSortedRowModel: config.features.sorting ? getSortedRowModel() : undefined,
     getFilteredRowModel: config.features.search ? getFilteredRowModel() : undefined,
     getPaginationRowModel: config.features.pagination ? getPaginationRowModel() : undefined,
-    globalFilterFn: (row, columnId, filterValue) => {
-      if (!filterValue) return true
-      const textCols = new Set(enabledTextCols)
-      for (const key of textCols) {
-        const val = row.getValue(key)
-        if (String(val ?? '').toLowerCase().includes(String(filterValue).toLowerCase())) return true
-      }
-      return false
-    },
+    globalFilterFn: makeGlobalFilter(config, enabledTextCols),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
