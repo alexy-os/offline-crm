@@ -368,8 +368,6 @@ export default function GetTable() {
               <Text size="sm" c="muted">Define columns, toggle features, preview table, export artifacts.</Text>
             </Stack>
           </Box>
-          <ExportPanel config={config} rows={rows} />
-          <SchemaPreview config={config} rows={rows} />
 
           <div className="flex gap-2">
             <label htmlFor="editor-sheet">
@@ -433,6 +431,9 @@ export default function GetTable() {
               </Button>
             </Group>
           )}
+
+          <ExportPanel config={config} rows={rows} />
+          <SchemaPreview config={config} rows={rows} />
         </Stack>
       </Container>
     </Block>
