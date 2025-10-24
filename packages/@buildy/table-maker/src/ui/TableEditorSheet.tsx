@@ -1,7 +1,7 @@
 import { Activity, useEffect, useState } from 'react'
 import { Box, Button, Stack, Title } from '@ui8kit/core'
 import { Sheet } from '@ui8kit/core'
-import { Input, Select } from '@ui8kit/form'
+import { Input, Select, Textarea } from '@ui8kit/form'
 import type { BuilderConfig, BuilderColumn, ColumnKind } from '@buildy/builder-core'
 
 export function TableEditorSheet({
@@ -48,6 +48,7 @@ export function TableEditorSheet({
 function EditorForm({ value, onApply }: { value: BuilderConfig; onApply: (v: BuilderConfig) => void }) {
   const [name, setName] = useState(value.tableName)
   const [cols, setCols] = useState<BuilderColumn[]>(value.columns)
+  const [rawOptions, setRawOptions] = useState<Record<string, string>>({})
 
   const addColumn = () => {
     const idx = cols.length + 1
@@ -60,7 +61,19 @@ function EditorForm({ value, onApply }: { value: BuilderConfig; onApply: (v: Bui
 
   const removeColumn = (i: number) => setCols(cols.filter((_, idx) => idx !== i))
 
-  const apply = () => onApply({ ...value, tableName: name || 'table', columns: cols })
+  const apply = () => {
+    const nextCols = cols.map((c) => {
+      if (c.kind === 'select' || c.kind === 'tags') {
+        const text = rawOptions[c.key] ?? formatOptions(c)
+        return {
+          ...c,
+          meta: { ...(c.meta || {}), options: parseOptions(text) }
+        }
+      }
+      return c
+    })
+    onApply({ ...value, tableName: name || 'table', columns: nextCols })
+  }
 
   return (
     <Box p="md" bg="card">
@@ -101,6 +114,20 @@ function EditorForm({ value, onApply }: { value: BuilderConfig; onApply: (v: Bui
               <div className="col-span-3">
                 <Button variant="destructive" onClick={() => removeColumn(i)}>Remove</Button>
               </div>
+              {(c.kind === 'select' || c.kind === 'tags') && (
+                <div className="col-span-12">
+                  <label>Options (separate by comma , or |; use "value:Label" or just value)</label>
+                  <Textarea
+                    placeholder={c.kind === 'select' ? 'male:Male, female:Female' : 'tag1, tag2, tag3'}
+                    value={rawOptions[c.key] ?? formatOptions(c)}
+                    onChange={(e) => setRawOptions((r) => ({ ...r, [c.key]: (e.target as HTMLTextAreaElement).value }))}
+                    onBlur={(e) => {
+                      const text = (e.target as HTMLTextAreaElement).value
+                      updateColumn(i, { meta: { ...(c.meta || {}), options: parseOptions(text) } })
+                    }}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -130,10 +157,51 @@ function RowEditorForm({ value, row, onApply }: { value: BuilderConfig; row: Rec
                 <label>{c.name}</label>
               </div>
               <div className="col-span-8">
-                <Input
-                  value={current[c.key] ?? ''}
-                  onChange={(e) => setField(c.key, (e.target as HTMLInputElement).value)}
-                />
+                {c.kind === 'number' ? (
+                  <Input
+                    type="number"
+                    value={current[c.key] ?? 0}
+                    onChange={(e) => setField(c.key, Number((e.target as HTMLInputElement).value))}
+                  />
+                ) : c.kind === 'boolean' ? (
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!current[c.key]}
+                      onChange={(e) => setField(c.key, (e.target as HTMLInputElement).checked)}
+                    />
+                  </label>
+                ) : c.kind === 'select' ? (
+                  <Select
+                    value={current[c.key] ?? ''}
+                    onChange={(e) => setField(c.key, (e.target as HTMLSelectElement).value)}
+                  >
+                    {(Array.isArray((c as any).meta?.options) ? (c as any).meta.options : []).map((opt: any) => (
+                      <option key={String(opt.value)} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </Select>
+                ) : c.kind === 'tags' ? (
+                  <Input
+                    placeholder="comma separated"
+                    value={Array.isArray(current[c.key]) ? (current[c.key] as any[]).join(', ') : ''}
+                    onChange={(e) => setField(c.key, (e.target as HTMLInputElement).value.split(',').map(s => s.trim()).filter(Boolean))}
+                  />
+                ) : c.kind === 'object' ? (
+                  <Textarea
+                    value={JSON.stringify(current[c.key] ?? {}, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        const val = JSON.parse((e.target as HTMLTextAreaElement).value)
+                        setField(c.key, val)
+                      } catch {}
+                    }}
+                  />
+                ) : (
+                  <Input
+                    value={current[c.key] ?? ''}
+                    onChange={(e) => setField(c.key, (e.target as HTMLInputElement).value)}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -144,6 +212,26 @@ function RowEditorForm({ value, row, onApply }: { value: BuilderConfig; row: Rec
       </Stack>
     </Box>
   )
+}
+
+function parseOptions(text: string): Array<{ value: string; label: string }> {
+  return text
+    .split(/[\n,|]+/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((segment) => {
+      const [v, ...rest] = segment.split(':')
+      const value = (v || '').trim()
+      const label = rest.length ? rest.join(':').trim() : value
+      return { value, label }
+    })
+}
+
+function formatOptions(c: BuilderColumn): string {
+  const opts = (c as any).meta?.options as Array<{ value: string; label: string }> | undefined
+  if (!Array.isArray(opts)) return ''
+  // Use comma-separated output to be robust when newlines are not available
+  return opts.map((o) => `${o.value}:${o.label}`).join(', ')
 }
 
 
