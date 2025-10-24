@@ -1,8 +1,8 @@
 import { Block, Box, Button, Container, Group, Stack, Text, Title } from '@ui8kit/core'
-import { Input, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch } from '@ui8kit/form'
+import { Input, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch, Checkbox } from '@ui8kit/form'
 import { useMemo, useState } from 'react'
 import { TogglesBar, TableEditorSheet } from '@buildy/table-maker'
-import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table'
+import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, type SortingState, type ColumnFiltersState } from '@tanstack/react-table'
 import type { BuilderConfig as CoreConfig, ColumnKind as CoreKind } from '@buildy/builder-core'
 import { generateTypes as coreGenerateTypes, generateUI as coreGenerateUI, generateSQLNormalized } from '@buildy/builder-core'
 
@@ -43,8 +43,50 @@ const initialRows: Row[] = [
   { id: '2', name: 'Bob Smith', age: 28, gender: 'male', email: 'bob@test.com' },
 ]
 
-function buildColumns(defs: BuilderColumn[]): ColumnDef<Row, any>[] {
-  return defs.map((c) => ({ accessorKey: c.key, header: c.name }))
+function buildColumns(
+  defs: BuilderColumn[],
+  features: BuilderConfig['features'],
+  onEdit: (r: Row) => void,
+  onDelete: (id: string) => void
+): ColumnDef<Row, any>[] {
+  const cols: ColumnDef<Row, any>[] = []
+
+  if (features.multiDelete) {
+    cols.push({
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onChange={(e) => table.toggleAllPageRowsSelected((e.target as HTMLInputElement).checked)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onChange={(e) => row.toggleSelected((e.target as HTMLInputElement).checked)}
+          aria-label="Select row"
+        />
+      )
+    })
+  }
+
+  for (const c of defs) cols.push({ accessorKey: c.key, header: c.name })
+
+  if (features.edit || features.delete) {
+    cols.push({
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <Group gap="sm">
+          {features.edit && <Button variant="outline" onClick={() => onEdit(row.original)}>Edit</Button>}
+          {features.delete && <Button variant="destructive" onClick={() => onDelete(row.original.id)}>Delete</Button>}
+        </Group>
+      )
+    })
+  }
+
+  return cols
 }
 
 function generateTypes(config: BuilderConfig): string {
@@ -133,8 +175,23 @@ function pascal(name: string) {
 export default function GetTable() {
   const [config, setConfig] = useState<BuilderConfig>(defaultConfig)
   const [rows, setRows] = useState<Row[]>(initialRows)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
-  const columns = useMemo(() => buildColumns(config.columns), [config.columns])
+  const columns = useMemo(
+    () =>
+      buildColumns(
+        config.columns,
+        config.features,
+        (record) => {
+          const next = window.prompt('Edit name', String(record.name ?? ''))
+          if (next != null) setRows((rs) => rs.map((r) => (r.id === record.id ? { ...r, name: next } : r)))
+        },
+        (id) => setRows((rs) => rs.filter((r) => r.id !== id))
+      ),
+    [config.columns, config.features]
+  )
 
   const table = useReactTable({
     data: rows,
@@ -143,6 +200,10 @@ export default function GetTable() {
     getSortedRowModel: config.features.sorting ? getSortedRowModel() : undefined,
     getFilteredRowModel: config.features.search ? getFilteredRowModel() : undefined,
     getPaginationRowModel: config.features.pagination ? getPaginationRowModel() : undefined,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    onRowSelectionChange: setRowSelection,
+    state: { sorting, columnFilters, rowSelection },
   })
 
   const download = (filename: string, content: string, type = 'text/plain') => {
@@ -181,6 +242,44 @@ export default function GetTable() {
                 features={config.features}
                 onChange={(next) => setConfig((c) => ({ ...c, features: next }))}
               />
+              <Group justify="between" align="center">
+                {config.features.search && (
+                  <Input
+                    placeholder="Filter..."
+                    value={(table.getColumn(config.columns[0]?.key || '')?.getFilterValue() as string) ?? ''}
+                    onChange={(e) => table.getColumn(config.columns[0]?.key || '')?.setFilterValue(e.target.value)}
+                    className="max-w-sm"
+                  />
+                )}
+                <Group gap="sm">
+                  {config.features.multiDelete && Object.keys(rowSelection).length > 0 && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        const ids = new Set(
+                          table.getFilteredSelectedRowModel().rows.map((r) => (r.original as Row).id)
+                        )
+                        setRows((rs) => rs.filter((r) => !ids.has(r.id)))
+                        setRowSelection({})
+                      }}
+                    >
+                      Delete Selected ({Object.keys(rowSelection).length})
+                    </Button>
+                  )}
+                  {config.features.create && (
+                    <Button
+                      onClick={() => {
+                        const id = String(Date.now())
+                        const newRow: Row = { id }
+                        for (const c of config.columns) newRow[c.key] = ''
+                        setRows((rs) => [...rs, newRow])
+                      }}
+                    >
+                      Add Row
+                    </Button>
+                  )}
+                </Group>
+              </Group>
               <Text size="sm" c="muted">Define columns, toggle features, preview table, export artifacts.</Text>
             </Stack>
           </Box>
@@ -196,7 +295,16 @@ export default function GetTable() {
                     <TableRow key={hg.id}>
                       {hg.headers.map(h => (
                         <TableHead key={h.id}>
-                          {h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}
+                          {h.isPlaceholder ? null : (
+                            <div className="flex items-center">
+                              {flexRender(h.column.columnDef.header, h.getContext())}
+                              {config.features.sorting && h.column.getCanSort() && (
+                                <Button variant="ghost" onClick={h.column.getToggleSortingHandler()}>
+                                  {h.column.getIsSorted() === 'asc' ? '↑' : h.column.getIsSorted() === 'desc' ? '↓' : '↕'}
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </TableHead>
                       ))}
                     </TableRow>
@@ -204,7 +312,7 @@ export default function GetTable() {
                 </TableHeader>
                 <TableBody>
                   {table.getRowModel().rows.map(r => (
-                    <TableRow key={r.id}>
+                    <TableRow key={r.id} data-state={r.getIsSelected() && 'selected'}>
                       {r.getVisibleCells().map(c => (
                         <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
                       ))}
@@ -214,6 +322,16 @@ export default function GetTable() {
               </Table>
             </div>
           </Box>
+          {config.features.pagination && (
+            <Group justify="end" gap="sm">
+              <Button variant="outline" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                Previous
+              </Button>
+              <Button variant="outline" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                Next
+              </Button>
+            </Group>
+          )}
         </Stack>
       </Container>
     </Block>

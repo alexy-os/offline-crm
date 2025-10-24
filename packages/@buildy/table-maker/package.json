@@ -16,11 +16,13 @@
     "type-check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.0.0 || ^20.0.0",
+    "react-dom": "^19.0.0 || ^20.0.0"
   },
   "dependencies": {
-    "@buildy/builder-core": "workspace:*"
+    "@buildy/builder-core": "workspace:*",
+    "@ui8kit/core": "workspace:*",
+    "@ui8kit/form": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
