@@ -1,6 +1,6 @@
 import { Block, Box, Button, Container, Group, Stack, Text, Title } from '@ui8kit/core'
 import { Input, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch, Checkbox } from '@ui8kit/form'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { TogglesBar, TableEditorSheet } from '@buildy/table-maker'
 import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, type SortingState, type ColumnFiltersState } from '@tanstack/react-table'
 import type { BuilderConfig as CoreConfig, ColumnKind as CoreKind } from '@buildy/builder-core'
@@ -25,14 +25,14 @@ const defaultConfig: BuilderConfig = {
     { key: 'email', name: 'Email', kind: 'text' },
   ],
   features: {
-    search: true,
-    sorting: true,
-    pagination: true,
-    create: true,
-    edit: true,
-    delete: true,
-    multiDelete: true,
-    columnsPanel: true,
+    search: false,
+    sorting: false,
+    pagination: false,
+    create: false,
+    edit: false,
+    delete: false,
+    multiDelete: false,
+    columnsPanel: false,
   },
 }
 
@@ -178,6 +178,22 @@ export default function GetTable() {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('maker:features')
+      if (raw) {
+        const saved = JSON.parse(raw) as BuilderConfig['features']
+        setConfig((c) => ({ ...c, features: { ...c.features, ...saved } }))
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('maker:features', JSON.stringify(config.features))
+    } catch {}
+  }, [config.features])
 
   const columns = useMemo(
     () =>
