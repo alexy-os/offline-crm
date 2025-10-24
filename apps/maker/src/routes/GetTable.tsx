@@ -201,8 +201,8 @@ export default function GetTable() {
         config.columns,
         config.features,
         (record) => {
-          const next = window.prompt('Edit name', String(record.name ?? ''))
-          if (next != null) setRows((rs) => rs.map((r) => (r.id === record.id ? { ...r, name: next } : r)))
+          // open row editor in sheet via openSignal and mode=row
+          setEditor({ mode: 'row', row: record, signal: Date.now() })
         },
         (id) => setRows((rs) => rs.filter((r) => r.id !== id))
       ),
@@ -235,6 +235,8 @@ export default function GetTable() {
   const uiCode = coreGenerateUI(config)
   const typesCode = coreGenerateTypes(config)
   const sqlCode = generateSQLNormalized(config)
+
+  const [editor, setEditor] = useState<{ mode: 'table' | 'row'; row?: Row | null; signal?: number }>({ mode: 'table' })
 
   return (
     <Block component="section" py="xl">
@@ -300,7 +302,21 @@ export default function GetTable() {
             </Stack>
           </Box>
 
-          <TableEditorSheet value={config} onChange={setConfig} />
+          <div className="flex gap-2">
+            <label htmlFor="editor-sheet">
+              <Button variant="secondary" onClick={() => setEditor({ mode: 'table', signal: Date.now() })}>Table Editor</Button>
+            </label>
+          </div>
+          <TableEditorSheet
+            value={config}
+            onChange={setConfig}
+            mode={editor.mode}
+            row={editor.row}
+            onSaveRow={(next) => {
+              setRows((rs) => rs.map((r) => (r.id === editor.row?.id ? { ...r, ...next } : r)))
+            }}
+            openSignal={editor.signal}
+          />
 
           <Box p="md" bg="card">
             <Text fw="bold">Preview</Text>

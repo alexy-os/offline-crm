@@ -1,31 +1,51 @@
-import { useState } from 'react'
-import { Activity } from 'react'
+import { Activity, useEffect, useState } from 'react'
 import { Box, Button, Stack, Title } from '@ui8kit/core'
-import { Sheet, SheetTrigger } from '@ui8kit/core'
+import { Sheet } from '@ui8kit/core'
 import { Input, Select } from '@ui8kit/form'
 import type { BuilderConfig, BuilderColumn, ColumnKind } from '@buildy/builder-core'
 
-export function TableEditorSheet({ value, onChange }: { value: BuilderConfig; onChange: (v: BuilderConfig) => void }) {
-  const [open, setOpen] = useState(false)
+export function TableEditorSheet({
+  value,
+  onChange,
+  mode = 'table',
+  row,
+  onSaveRow,
+  openSignal,
+}: {
+  value: BuilderConfig
+  onChange: (v: BuilderConfig) => void
+  mode?: 'table' | 'row'
+  row?: Record<string, any> | null
+  onSaveRow?: (next: Record<string, any>) => void
+  openSignal?: number
+}) {
+  useEffect(() => {
+    if (openSignal !== undefined) {
+      const input = document.getElementById('editor-sheet') as HTMLInputElement | null
+      if (input) input.checked = true
+    }
+  }, [openSignal])
+
+  const title = mode === 'row' ? 'Row Editor' : 'Table Editor'
+
   return (
-    <div>
-      <SheetTrigger htmlFor="table-editor-sheet" variant="secondary" onClick={() => setOpen(true)}>
-        Table Editor
-      </SheetTrigger>
-      <Sheet id="table-editor-sheet" side="right" size="2xl" showTrigger={false} title="Table Editor">
-        <Activity mode={open ? 'visible' : 'hidden'}>
-          <EditorForm
+    <Sheet id="editor-sheet" side="right" size="2xl" showTrigger={false} title={title}>
+      <Activity mode={'visible'}>
+        {mode === 'row' ? (
+          <RowEditorForm
             value={value}
-            onApply={(next) => onChange(next)}
-            onClose={() => setOpen(false)}
+            row={row || {}}
+            onApply={(next) => onSaveRow?.(next)}
           />
-        </Activity>
-      </Sheet>
-    </div>
+        ) : (
+          <EditorForm value={value} onApply={onChange} />
+        )}
+      </Activity>
+    </Sheet>
   )
 }
 
-function EditorForm({ value, onApply, onClose }: { value: BuilderConfig; onApply: (v: BuilderConfig) => void; onClose: () => void }) {
+function EditorForm({ value, onApply }: { value: BuilderConfig; onApply: (v: BuilderConfig) => void }) {
   const [name, setName] = useState(value.tableName)
   const [cols, setCols] = useState<BuilderColumn[]>(value.columns)
 
@@ -49,7 +69,7 @@ function EditorForm({ value, onApply, onClose }: { value: BuilderConfig; onApply
         <div className="flex items-center gap-2">
           <Input value={name} onChange={(e) => setName(e.target.value)} />
           <Button onClick={addColumn}>Add column</Button>
-          <label htmlFor="table-editor-sheet">
+          <label htmlFor="editor-sheet">
             <Button variant="secondary" onClick={apply}>Apply</Button>
           </label>
         </div>
@@ -85,14 +105,42 @@ function EditorForm({ value, onApply, onClose }: { value: BuilderConfig; onApply
           ))}
         </div>
 
-        <div className="flex gap-2">
-          <label htmlFor="table-editor-sheet">
-            <Button variant="secondary" onClick={onClose}>Close</Button>
-          </label>
-          <label htmlFor="table-editor-sheet">
-            <Button variant="primary" onClick={apply}>Save</Button>
-          </label>
+        <label htmlFor="editor-sheet">
+          <Button variant="primary" onClick={apply}>Save</Button>
+        </label>
+      </Stack>
+    </Box>
+  )
+}
+
+function RowEditorForm({ value, row, onApply }: { value: BuilderConfig; row: Record<string, any>; onApply: (next: Record<string, any>) => void }) {
+  const [current, setCurrent] = useState<Record<string, any>>(row)
+
+  const setField = (key: string, val: any) => setCurrent((r) => ({ ...r, [key]: val }))
+  const apply = () => onApply(current)
+
+  return (
+    <Box p="md" bg="card">
+      <Stack gap="md">
+        <Title size="lg">Row</Title>
+        <div className="grid gap-3">
+          {value.columns.map((c) => (
+            <div key={c.key} className="grid grid-cols-12 gap-2 items-center">
+              <div className="col-span-4">
+                <label>{c.name}</label>
+              </div>
+              <div className="col-span-8">
+                <Input
+                  value={current[c.key] ?? ''}
+                  onChange={(e) => setField(c.key, (e.target as HTMLInputElement).value)}
+                />
+              </div>
+            </div>
+          ))}
         </div>
+        <label htmlFor="editor-sheet">
+          <Button variant="primary" onClick={apply}>Save</Button>
+        </label>
       </Stack>
     </Box>
   )
