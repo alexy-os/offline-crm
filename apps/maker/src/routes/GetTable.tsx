@@ -1,6 +1,7 @@
 import { Block, Box, Button, Container, Group, Stack, Text, Title } from '@ui8kit/core'
 import { Input, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch } from '@ui8kit/form'
 import { useMemo, useState } from 'react'
+import { TogglesBar, TableEditorSheet } from '@buildy/table-maker'
 import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table'
 import type { BuilderConfig as CoreConfig, ColumnKind as CoreKind } from '@buildy/builder-core'
 import { generateTypes as coreGenerateTypes, generateUI as coreGenerateUI, generateSQLNormalized } from '@buildy/builder-core'
@@ -175,10 +176,16 @@ export default function GetTable() {
           </Group>
 
           <Box p="md" bg="card">
-            <Text size="sm" c="muted">Define columns, toggle features, preview table, export artifacts.</Text>
+            <Stack gap="md">
+              <TogglesBar
+                features={config.features}
+                onChange={(next) => setConfig((c) => ({ ...c, features: next }))}
+              />
+              <Text size="sm" c="muted">Define columns, toggle features, preview table, export artifacts.</Text>
+            </Stack>
           </Box>
 
-          <BuilderEditor value={config} onChange={setConfig} />
+          <TableEditorSheet value={config} onChange={setConfig} />
 
           <Box p="md" bg="card">
             <Text fw="bold">Preview</Text>
@@ -212,78 +219,4 @@ export default function GetTable() {
     </Block>
   )
 }
-
-function BuilderEditor({ value, onChange }: { value: BuilderConfig; onChange: (v: BuilderConfig) => void }) {
-  const [name, setName] = useState(value.tableName)
-  const [cols, setCols] = useState<BuilderColumn[]>(value.columns)
-  const [features, setFeatures] = useState(value.features)
-
-  const addColumn = () => {
-    const idx = cols.length + 1
-    setCols([...cols, { key: `field_${idx}`, name: `Field ${idx}`, kind: 'text' }])
-  }
-
-  const updateColumn = (i: number, next: Partial<BuilderColumn>) => {
-    setCols(cols.map((c, idx) => (idx === i ? { ...c, ...next } : c)))
-  }
-
-  const removeColumn = (i: number) => setCols(cols.filter((_, idx) => idx !== i))
-
-  const apply = () => onChange({ tableName: name || 'table', columns: cols, features })
-
-  return (
-    <Box p="md" bg="card">
-      <Stack gap="md">
-        <Title size="lg">Definition</Title>
-        <Group gap="md">
-          <div className="grid gap-2">
-            <label>Table name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <Button onClick={addColumn}>Add column</Button>
-          <Button variant="secondary" onClick={apply}>Apply</Button>
-        </Group>
-
-        <div className="grid gap-3">
-          {cols.map((c, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-3">
-                <label>Key</label>
-                <Input value={c.key} onChange={(e) => updateColumn(i, { key: e.target.value })} />
-              </div>
-              <div className="col-span-3">
-                <label>Name</label>
-                <Input value={c.name} onChange={(e) => updateColumn(i, { name: e.target.value })} />
-              </div>
-              <div className="col-span-3">
-                <label>Type</label>
-                <Select value={c.kind} onChange={(e) => updateColumn(i, { kind: e.target.value as ColumnKind })}>
-                  <option value="text">text</option>
-                  <option value="number">number</option>
-                  <option value="select">select</option>
-                  <option value="boolean">boolean</option>
-                  <option value="date">date</option>
-                </Select>
-              </div>
-              <div className="col-span-3">
-                <Button variant="destructive" onClick={() => removeColumn(i)}>Remove</Button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Title size="lg">Features</Title>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {Object.entries(features).map(([k, v]) => (
-            <label key={k} className="flex items-center gap-2">
-              <Switch checked={v} onChange={(e) => setFeatures({ ...features, [k]: (e.target as HTMLInputElement).checked })} />
-              <span>{k}</span>
-            </label>
-          ))}
-        </div>
-      </Stack>
-    </Box>
-  )
-}
-
 
