@@ -1,16 +1,28 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "composite": true,
-    "rootDir": "./src",
-    "outDir": "./dist",
     "jsx": "react-jsx",
+    "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@ui8kit/core": ["../../packages/@ui8kit/core/src"],
+      "@ui8kit/core/*": ["../../packages/@ui8kit/core/src/*"],
+      "@ui8kit/form": ["../../packages/@ui8kit/form/src"],
+      "@ui8kit/form/*": ["../../packages/@ui8kit/form/src/*"],
+      "@buildy/builder-core": ["../../packages/@buildy/builder-core/src"],
+      "@buildy/builder-core/*": ["../../packages/@buildy/builder-core/src/*"],
+      "@buildy/table-maker": ["../../packages/@buildy/table-maker/src"],
+      "@buildy/table-maker/*": ["../../packages/@buildy/table-maker/src/*"]
     }
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "../../packages/@ui8kit/form/src",
+    "../../packages/@ui8kit/core/src",
+    "../../packages/@buildy/builder-core/src",
+    "../../packages/@buildy/table-maker/src"
+  ]
 }
 
 

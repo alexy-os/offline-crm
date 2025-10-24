@@ -11,6 +11,8 @@
   "dependencies": {
     "@ui8kit/core": "workspace:*",
     "@ui8kit/form": "workspace:*",
+    "@buildy/builder-core": "workspace:*",
+    "@buildy/table-maker": "workspace:*",
     "@tanstack/react-table": "^8.20.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

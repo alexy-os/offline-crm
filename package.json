@@ -11,7 +11,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "packages/@ui8kit/*"
+    "packages/@ui8kit/*",
+    "packages/@buildy/*"
   ],
   "scripts": {
     "dev": "bunx turbo run dev",

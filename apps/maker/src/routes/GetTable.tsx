@@ -2,8 +2,10 @@ import { Block, Box, Button, Container, Group, Stack, Text, Title } from '@ui8ki
 import { Input, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Switch } from '@ui8kit/form'
 import { useMemo, useState } from 'react'
 import { ColumnDef, flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table'
+import type { BuilderConfig as CoreConfig, ColumnKind as CoreKind } from '@buildy/builder-core'
+import { generateTypes as coreGenerateTypes, generateUI as coreGenerateUI, generateSQLNormalized } from '@buildy/builder-core'
 
-type ColumnKind = 'text' | 'number' | 'select' | 'boolean' | 'date'
+type ColumnKind = CoreKind
 
 interface BuilderColumn {
   key: string
@@ -11,19 +13,7 @@ interface BuilderColumn {
   kind: ColumnKind
 }
 
-interface BuilderConfig {
-  tableName: string
-  columns: BuilderColumn[]
-  features: {
-    search: boolean
-    sorting: boolean
-    pagination: boolean
-    create: boolean
-    edit: boolean
-    delete: boolean
-    multiDelete: boolean
-  }
-}
+interface BuilderConfig extends CoreConfig {}
 
 const defaultConfig: BuilderConfig = {
   tableName: 'users',
@@ -41,6 +31,7 @@ const defaultConfig: BuilderConfig = {
     edit: true,
     delete: true,
     multiDelete: true,
+    columnsPanel: true,
   },
 }
 
@@ -163,9 +154,9 @@ export default function GetTable() {
     URL.revokeObjectURL(url)
   }
 
-  const uiCode = generateUI(config)
-  const typesCode = generateTypes(config)
-  const sqlCode = generateSQL(config)
+  const uiCode = coreGenerateUI(config)
+  const typesCode = coreGenerateTypes(config)
+  const sqlCode = generateSQLNormalized(config)
 
   return (
     <Block component="section" py="xl">
