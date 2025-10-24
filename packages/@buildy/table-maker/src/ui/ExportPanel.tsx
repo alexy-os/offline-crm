@@ -18,17 +18,17 @@ export function ExportPanel({ config }: { config: BuilderConfig }) {
 
   return (
     <Box p="md" bg="card">
-      <Stack gap="md">
+      <Stack gap="md" p="sm">
         <Title size="lg">Export</Title>
         <Text size="sm" c="muted">Copy or download generated artifacts.</Text>
-        <div className="flex gap-2 flex-wrap">
+        <Stack gap="sm">
           <Button onClick={() => navigator.clipboard.writeText(ui)}>Copy UI</Button>
           <Button onClick={() => navigator.clipboard.writeText(types)}>Copy Types</Button>
           <Button onClick={() => navigator.clipboard.writeText(sql)}>Copy SQL</Button>
           <Button variant="secondary" onClick={() => download('ui.tsx', ui)}>Download UI</Button>
           <Button variant="secondary" onClick={() => download('types.ts', types)}>Download Types</Button>
           <Button variant="secondary" onClick={() => download('schema.sql', sql)}>Download SQL</Button>
-        </div>
+        </Stack>
       </Stack>
     </Box>
   )

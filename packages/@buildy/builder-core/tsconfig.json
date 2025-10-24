@@ -1,8 +1,18 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@buildy/builder-core": ["../builder-core/dist/index.d.ts"],
+      "@ui8kit/core": ["../../@ui8kit/core/dist/index.d.ts"],
+      "@ui8kit/form": ["../../@ui8kit/form/dist/index.d.ts"]
+    }
   },
   "include": ["src"]
 }
