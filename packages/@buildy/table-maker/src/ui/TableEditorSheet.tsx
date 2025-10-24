@@ -61,6 +61,11 @@ function EditorForm({ value, onApply }: { value: BuilderConfig; onApply: (v: Bui
 
   const removeColumn = (i: number) => setCols(cols.filter((_, idx) => idx !== i))
 
+  const closeSheet = () => {
+    const input = document.getElementById('editor-sheet') as HTMLInputElement | null
+    if (input) input.checked = false
+  }
+
   const apply = () => {
     const nextCols = cols.map((c) => {
       if (c.kind === 'select' || c.kind === 'tags') {
@@ -73,6 +78,7 @@ function EditorForm({ value, onApply }: { value: BuilderConfig; onApply: (v: Bui
       return c
     })
     onApply({ ...value, tableName: name || 'table', columns: nextCols })
+    closeSheet()
   }
 
   return (
@@ -144,7 +150,11 @@ function RowEditorForm({ value, row, onApply }: { value: BuilderConfig; row: Rec
   const [current, setCurrent] = useState<Record<string, any>>(row)
 
   const setField = (key: string, val: any) => setCurrent((r) => ({ ...r, [key]: val }))
-  const apply = () => onApply(current)
+  const apply = () => {
+    onApply(current)
+    const input = document.getElementById('editor-sheet') as HTMLInputElement | null
+    if (input) input.checked = false
+  }
 
   return (
     <Box p="md" bg="card">

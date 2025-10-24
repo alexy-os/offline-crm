@@ -195,6 +195,7 @@ export default function GetTable() {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+  const [enabledTextCols, setEnabledTextCols] = useState<string[]>([])
 
   useEffect(() => {
     try {
@@ -211,6 +212,21 @@ export default function GetTable() {
       window.localStorage.setItem('maker:features', JSON.stringify(config.features))
     } catch {}
   }, [config.features])
+
+  // Keep enabled text columns in sync with current columns; default enable all text columns
+  useEffect(() => {
+    const textKeys = config.columns.filter((c) => c.kind === 'text').map((c) => c.key)
+    setEnabledTextCols((prev) => {
+      const prevSet = new Set(prev)
+      const next: string[] = []
+      for (const k of textKeys) {
+        // preserve previous toggle when possible; enable newly added by default
+        if (prevSet.has(k)) next.push(k)
+        else next.push(k)
+      }
+      return next
+    })
+  }, [config.columns])
 
   const columns = useMemo(
     () =>
@@ -233,6 +249,15 @@ export default function GetTable() {
     getSortedRowModel: config.features.sorting ? getSortedRowModel() : undefined,
     getFilteredRowModel: config.features.search ? getFilteredRowModel() : undefined,
     getPaginationRowModel: config.features.pagination ? getPaginationRowModel() : undefined,
+    globalFilterFn: (row, columnId, filterValue) => {
+      if (!filterValue) return true
+      const textCols = new Set(enabledTextCols)
+      for (const key of textCols) {
+        const val = row.getValue(key)
+        if (String(val ?? '').toLowerCase().includes(String(filterValue).toLowerCase())) return true
+      }
+      return false
+    },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
@@ -279,12 +304,36 @@ export default function GetTable() {
               />
               <Group justify="between" align="center">
                 {config.features.search && (
-                  <Input
-                    placeholder="Filter..."
-                    value={(table.getColumn(config.columns[0]?.key || '')?.getFilterValue() as string) ?? ''}
-                    onChange={(e) => table.getColumn(config.columns[0]?.key || '')?.setFilterValue(e.target.value)}
-                    className="max-w-sm"
-                  />
+                  <div className="flex flex-col gap-1">
+                    <Input
+                      placeholder="Filter..."
+                      value={(table.getState().globalFilter as string) ?? ''}
+                      onChange={(e) => table.setGlobalFilter((e.target as HTMLInputElement).value)}
+                      className="max-w-sm"
+                    />
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      {config.columns
+                        .filter((c) => c.kind === 'text')
+                        .map((c) => (
+                          <label key={c.key} className="inline-flex items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={enabledTextCols.includes(c.key)}
+                              onChange={(e) => {
+                                const checked = (e.target as HTMLInputElement).checked
+                                setEnabledTextCols((prev) => {
+                                  const set = new Set(prev)
+                                  if (checked) set.add(c.key)
+                                  else set.delete(c.key)
+                                  return Array.from(set)
+                                })
+                              }}
+                            />
+                            {c.name}
+                          </label>
+                        ))}
+                    </div>
+                  </div>
                 )}
                 <Group gap="sm">
                   {config.features.multiDelete && Object.keys(rowSelection).length > 0 && (
